@@ -52,8 +52,8 @@ public class ProxySample extends WebSocketSample {
     {
         if (connectionString == null || queueName == null || proxyHostname == null || proxyPort == 0)
         {
-            System.out.println("Run sample with either command line options -c=connectionString -q=queueName " +
-                    "-h=proxyHostname -p=proxyPort or with environment variables 'SERVICE_BUS_CONNECTION_STRING', " +
+            System.out.println("Run sample with either command line options -c connectionString -q queueName " +
+                    "-h proxyHostname -p proxyPort or with environment variables 'SERVICE_BUS_CONNECTION_STRING', " +
                     "'QUEUE_NAME', 'PROXY_HOSTNAME', and 'PROXY_PORT' set");
             System.exit(1);
         }

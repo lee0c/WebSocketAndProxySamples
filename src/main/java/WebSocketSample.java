@@ -86,7 +86,7 @@ public class WebSocketSample {
     {
         if (connectionString == null || queueName == null)
         {
-            System.out.println("Run sample with either command line options -c=connectionString -q=queueName or with " +
+            System.out.println("Run sample with either command line options -c connectionString -q queueName or with " +
                     "environment variables 'SERVICE_BUS_CONNECTION_STRING' and 'QUEUE_NAME' set");
             System.exit(1);
         }
