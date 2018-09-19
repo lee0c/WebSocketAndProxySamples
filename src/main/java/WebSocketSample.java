@@ -3,6 +3,8 @@
 
 import com.google.gson.reflect.TypeToken;
 import com.microsoft.azure.servicebus.*;
+import com.microsoft.azure.servicebus.primitives.TransportType;
+import com.microsoft.azure.servicebus.primitives.Util;
 import com.microsoft.azure.servicebus.primitives.ConnectionStringBuilder;
 import com.google.gson.Gson;
 
@@ -11,73 +13,113 @@ import static java.nio.charset.StandardCharsets.*;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.function.Function;
 
 import org.apache.commons.cli.*;
 
-public class WebsocketSample {
+public class WebSocketSample {
 
-    static final String CONNECTION_STRING_NAME = "SERVICE_BUS_CONNECTION_STRING";
-    static final Gson GSON = new Gson();
+    private static final String CONNECTION_STRING_ENV_VAR = "SERVICE_BUS_CONNECTION_STRING";
+    private static final String QUEUE_NAME_ENV_VAR = "QUEUE_NAME";
 
-    // change this if your queue is named something else
-    static final String queueName = "BasicQueue";
+    String connectionString = null;
+    String queueName = null;
 
-    public static void main(String[] args) {
+    private static final Gson GSON = new Gson();
 
-        System.exit(runApp(args, (connectionString) -> {
-            WebsocketSample app = new WebsocketSample();
-            try {
-                app.run(connectionString);
-                return 0;
-            } catch (Exception e) {
-                System.out.printf("%s", e.toString());
-                return 1;
-            }
-        }));
-    }
+    private ConnectionStringBuilder connectionStringBuilder;
+    ClientSettings clientSettings;
 
-    public static int runApp(String[] args, Function<String, Integer> run) {
+    public static void main(String[] args)
+    {
+        WebSocketSample app = new WebSocketSample();
         try {
-            // parse connection string from command line
-            Options options = new Options();
-            options.addOption(new Option("c", true, "Connection string"));
-            CommandLineParser clp = new DefaultParser();
-            CommandLine cl = clp.parse(options, args);
-
-            String connectionString = cl.getOptionValue("c"); // either null or useful value
-
-            // get overrides from the environment
-            String env = System.getenv(CONNECTION_STRING_NAME);
-            if (env != null) {
-                connectionString = env;
-            }
-
-            if (connectionString == null) {
-                HelpFormatter formatter = new HelpFormatter();
-                formatter.printHelp("run jar with", "", options, "", true);
-                return 2;
-            }
-            return run.apply(connectionString);
+            app.setup(args);
+            app.run();
         } catch (Exception e) {
-            System.out.println(e.toString());
-            return 3;
+            System.out.printf("%s", e.toString());
         }
     }
 
+    protected void setup(String[] args) throws ParseException {
+        this.readArguments(args);
+        this.checkArguments();
+        this.createSettings();
+    }
 
-    public void run(String connectionString) throws Exception {
+    private void readArguments(String[] args) throws ParseException {
+        // set up to get command line args
+        Options options = new Options();
+        this.setOptions(options);
 
+        CommandLineParser clp = new DefaultParser();
+        CommandLine cl = clp.parse(options, args);
+
+        // get command line args
+        this.getOptions(cl);
+
+        // then check for environment variables
+        this.getEnvVars();
+    }
+
+    protected void setOptions(Options options)
+    {
+        options.addOption(new Option("c", true, "Connection string"));
+        options.addOption(new Option( "q", true, "Queue name"));
+    }
+
+    protected void getOptions(CommandLine cl)
+    {
+        connectionString = cl.getOptionValue("c");
+        queueName = cl.getOptionValue("q");
+    }
+
+    protected void getEnvVars()
+    {
+        String env = System.getenv(CONNECTION_STRING_ENV_VAR);
+        if (env != null) { connectionString = env; }
+
+        env = System.getenv(QUEUE_NAME_ENV_VAR);
+        if (env != null) { queueName = env; }
+    }
+
+    protected void checkArguments()
+    {
+        if (connectionString == null || queueName == null)
+        {
+            System.out.println("Run sample with either command line options -c=connectionString -q=queueName or with " +
+                    "environment variables 'SERVICE_BUS_CONNECTION_STRING' and 'QUEUE_NAME' set");
+            System.exit(1);
+        }
+    }
+
+    protected void createSettings()
+    {
+        connectionStringBuilder = new ConnectionStringBuilder(connectionString);
+        if (connectionStringBuilder.getTransportType() == TransportType.AMQP)
+            { connectionStringBuilder.setTransportType(TransportType.AMQP_WEB_SOCKETS); }
+        clientSettings = Util.getClientSettingsFromConnectionStringBuilder(connectionStringBuilder);
+    }
+
+    protected void run() throws Exception
+    {
         // Create a QueueClient instance for receiving using the connection string builder
         // We set the receive mode to "PeekLock", meaning the message is delivered
         // under a lock and must be acknowledged ("completed") to be removed from the queue
-        QueueClient receiveClient = new QueueClient(new ConnectionStringBuilder(connectionString, queueName), ReceiveMode.PEEKLOCK);
+        QueueClient receiveClient = new QueueClient(
+                connectionStringBuilder.getEndpoint(),
+                queueName,
+                clientSettings,
+                ReceiveMode.PEEKLOCK);
         this.registerReceiver(receiveClient);
 
         // Create a QueueClient instance for sending and then asynchronously send messages.
         // Close the sender once the send operation is complete.
-        QueueClient sendClient = new QueueClient(new ConnectionStringBuilder(connectionString, queueName), ReceiveMode.PEEKLOCK);
-        this.sendMessagesAsync(sendClient).thenRunAsync(() -> sendClient.closeAsync());
+        QueueClient sendClient = new QueueClient(
+                connectionStringBuilder.getEndpoint(),
+                queueName,
+                clientSettings,
+                ReceiveMode.PEEKLOCK);
+        this.sendMessagesAsync(sendClient).thenRunAsync(sendClient::closeAsync);
 
         // wait for ENTER or 10 seconds elapsing
         waitForEnter(10);
@@ -86,7 +128,7 @@ public class WebsocketSample {
         receiveClient.close();
     }
 
-    void registerReceiver(QueueClient queueClient) throws Exception {
+    private void registerReceiver(QueueClient queueClient) throws Exception {
 
         // register the RegisterMessageHandler callback
         queueClient.registerMessageHandler(new IMessageHandler() {
@@ -124,7 +166,7 @@ public class WebsocketSample {
         new MessageHandlerOptions(1, true, Duration.ofMinutes(1)));
     }
 
-    CompletableFuture<Void> sendMessagesAsync(QueueClient sendClient) {
+    private CompletableFuture<Void> sendMessagesAsync(QueueClient sendClient) {
         List<HashMap<String, String>> data =
                 GSON.fromJson(
                         "[" +
@@ -152,9 +194,7 @@ public class WebsocketSample {
             message.setTimeToLive(Duration.ofMinutes(2));
             System.out.printf("\nMessage sending: Id = %s", message.getMessageId());
             tasks.add(
-                sendClient.sendAsync(message).thenRunAsync(() -> {
-                    System.out.printf("\n\tMessage acknowledged: Id = %s", message.getMessageId());
-                })
+                sendClient.sendAsync(message).thenRunAsync(() -> System.out.printf("\n\tMessage acknowledged: Id = %s", message.getMessageId()))
             );
         }
         return CompletableFuture.allOf(tasks.toArray(new CompletableFuture<?>[tasks.size()]));

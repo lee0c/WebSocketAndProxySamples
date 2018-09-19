@@ -1,4 +1,4 @@
-## WebsocketSample
+## WebSocketSample
 
 A sample Java app to test Service Bus Java SDK with Websocket support. 
 Based on the code found 
@@ -15,4 +15,4 @@ Azure portal.
 * If using command line options, use `-c` followed by the connection string.
 
 The app is currently set to use a queue titled "BasicQueue." If you want to
-change that, edit the code on line 24 of `src/main/java/WebsocketSample.java`.
+change that, edit the code on line 24 of `src/main/java/WebSocketSample.java`.
