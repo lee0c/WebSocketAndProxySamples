@@ -1,4 +1,4 @@
-## WebSocketSample
+## WebSocketAndProxySamples
 
 Sample Java apps to test Service Bus Java SDK with WebSocket and Proxy support. 
 Based somewhat on the code found 
