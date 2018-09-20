@@ -14,10 +14,10 @@ public class ProxySample extends WebSocketSample {
         try {
             app.setup(args);
             app.run();
-            System.exit(0);
         } catch (Exception e) {
             System.out.printf("%s", e.toString());
         }
+        System.exit(0);
     }
 
     @Override

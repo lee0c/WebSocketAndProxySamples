@@ -35,10 +35,10 @@ public class WebSocketSample {
         try {
             app.setup(args);
             app.run();
-            System.exit(0);
         } catch (Exception e) {
             System.out.printf("%s", e.toString());
         }
+        System.exit(0);
     }
 
     protected void setup(String[] args) throws ParseException {
