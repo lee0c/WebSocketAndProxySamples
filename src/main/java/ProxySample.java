@@ -14,6 +14,7 @@ public class ProxySample extends WebSocketSample {
         try {
             app.setup(args);
             app.run();
+            System.exit(0);
         } catch (Exception e) {
             System.out.printf("%s", e.toString());
         }
@@ -32,7 +33,7 @@ public class ProxySample extends WebSocketSample {
     {
         super.getOptions(cl);
         proxyHostname = cl.getOptionValue("h");
-        proxyPort = Integer.valueOf(cl.getOptionValue("p"));
+        proxyPort = cl.getOptionValue("p") == null ? 0 : Integer.valueOf(cl.getOptionValue("p"));
     }
 
     @Override

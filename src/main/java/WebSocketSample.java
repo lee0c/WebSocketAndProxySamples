@@ -35,6 +35,7 @@ public class WebSocketSample {
         try {
             app.setup(args);
             app.run();
+            System.exit(0);
         } catch (Exception e) {
             System.out.printf("%s", e.toString());
         }
