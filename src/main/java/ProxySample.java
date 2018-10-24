@@ -1,5 +1,10 @@
 import org.apache.commons.cli.*;
 
+import java.io.IOException;
+import java.net.*;
+import java.util.LinkedList;
+import java.util.List;
+
 public class ProxySample extends WebSocketSample {
 
     private static final String PROXY_HOSTNAME_ENV_VAR = "PROXY_HOSTNAME";
@@ -66,7 +71,19 @@ public class ProxySample extends WebSocketSample {
     {
         super.createSettings();
 
-        this.clientSettings.setProxyHostName(proxyHostname);
-        this.clientSettings.setProxyHostPort(proxyPort);
+        /* CHANGES TO PROXY SETUP HERE */
+        ProxySelector.setDefault(new ProxySelector() {
+            @Override
+            public List<Proxy> select(URI uri) {
+                List<Proxy> proxies = new LinkedList<>();
+                proxies.add(new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyHostname, proxyPort)));
+                return proxies;
+            }
+
+            @Override
+            public void connectFailed(URI uri, SocketAddress sa, IOException ioe) {
+                // no-op
+            }
+        });
     }
 }
